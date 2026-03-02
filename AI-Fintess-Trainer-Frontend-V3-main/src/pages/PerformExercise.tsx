@@ -226,7 +226,7 @@ const PerformExercise = () => {
                 </Button>
               )}
               
-              {isComplete && (
+              {isComplete ? (
                 <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 text-green-500 rounded-lg text-center font-semibold animate-in fade-in zoom-in duration-300">
                   🎉 Goal Reached! Saving progress...
                 </div>
