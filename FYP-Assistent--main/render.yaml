@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fitbot-api
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: FYP-Assistent--main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+    healthCheckPath: /health

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: ai-fitness-trainer-frontend
+    env: static
+    branch: main
+    rootDir: AI-Fintess-Trainer-Frontend-V3-main
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_EXERCISE_API_URL
+        sync: false
+      - key: VITE_WORKOUT_API_URL
+        sync: false
+      - key: VITE_ASSISTANT_API_URL
+        sync: false

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ai-fitness-exercises-api
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: AI-Fitness-Trainer-Exercises-main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
