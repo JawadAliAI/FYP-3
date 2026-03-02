@@ -65,7 +65,7 @@ export default function SuggestedWorkouts() {
       setLoading(true);
 
       const res = await fetch(
-        `${import.meta.env.VITE_WORKOUT_API_URL || "http://127.0.0.1:8000"}/generate-workout`,
+        `${import.meta.env.VITE_WORKOUT_API_URL || "https://ai-workout-suggestion-api.onrender.com"}/generate-workout`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
