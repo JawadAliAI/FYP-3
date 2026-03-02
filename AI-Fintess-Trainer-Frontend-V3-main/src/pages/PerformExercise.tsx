@@ -9,7 +9,7 @@ import { Play, Square, Camera } from "lucide-react";
 import { Pose, Results } from "@mediapipe/pose";
 import { Camera as MediaPipeCamera } from "@mediapipe/camera_utils";
 
-const API_BASE = import.meta.env.VITE_EXERCISE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_EXERCISE_API_URL || "https://ai-fitness-exercises-api.onrender.com";
 
 const PerformExercise = () => {
   const location = useLocation();
