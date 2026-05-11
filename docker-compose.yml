@@ -1,0 +1,51 @@
+services:
+  # ─── Frontend (React/Vite) ─────────────────────────── port 11000
+  frontend:
+    build:
+      context: ./AI-Fintess-Trainer-Frontend-V3-main
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+    ports:
+      - "11000:80"
+    restart: unless-stopped
+    depends_on:
+      - fitbot
+      - workout
+      - exercises
+
+  # ─── FitBot Assistant API ──────────────────────────── port 11001
+  fitbot:
+    build:
+      context: ./FYP-Assistent--main
+      dockerfile: Dockerfile
+    ports:
+      - "11001:11001"
+    environment:
+      - PORT=11001
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    restart: unless-stopped
+
+  # ─── Workout Suggestion API ────────────────────────── port 11002
+  workout:
+    build:
+      context: ./AI-Workout-Suggestion-main
+      dockerfile: Dockerfile
+    ports:
+      - "11002:11002"
+    environment:
+      - PORT=11002
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
+
+  # ─── Exercise Detection API ────────────────────────── port 11003
+  exercises:
+    build:
+      context: ./AI-Fitness-Trainer-Exercises-main
+      dockerfile: Dockerfile
+    ports:
+      - "11003:11003"
+    environment:
+      - PORT=11003
+    restart: unless-stopped
