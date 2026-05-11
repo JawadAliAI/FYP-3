@@ -4,6 +4,7 @@ interface Exercise {
   name: string;
   sets?: number;
   reps?: string;
+  rest_seconds?: number;
 }
 
 interface Props {
@@ -17,7 +18,11 @@ export default function ExerciseCard({ exercise, day }: Props) {
   const handleStart = () => {
     navigate("/perform-exercise", {
       state: {
-        exercise,
+        exercise: {
+          ...exercise,
+          description: `${exercise.sets} sets × ${exercise.reps}${exercise.rest_seconds ? ` — ${exercise.rest_seconds}s rest` : ""}`,
+          calories_burned: 5, // default fallback kcal/min
+        },
         day,
       },
     });
@@ -32,6 +37,9 @@ export default function ExerciseCard({ exercise, day }: Props) {
           </h3>
           <p className="text-gray-400 text-sm mt-1">
             {exercise.sets} Sets • {exercise.reps}
+            {exercise.rest_seconds && (
+              <span className="ml-2 text-cyan-400">· {exercise.rest_seconds}s rest</span>
+            )}
           </p>
         </div>
 
@@ -39,7 +47,7 @@ export default function ExerciseCard({ exercise, day }: Props) {
           onClick={handleStart}
           className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
         >
-          Start Exercise
+          Perform Exercise
         </button>
       </div>
     </div>
