@@ -68,22 +68,11 @@ export default function SuggestedWorkouts() {
     try {
       setLoading(true);
 
-<<<<<<< Updated upstream
-      const res = await fetch(
-        `${import.meta.env.VITE_WORKOUT_API_URL || "http://109.123.243.92:11002"}/generate-workout`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        },
-      );
-=======
       const res = await fetch(`${workoutApi}/generate-workout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
->>>>>>> Stashed changes
 
       const raw = await res.json().catch(() => null);
       if (!res.ok) {

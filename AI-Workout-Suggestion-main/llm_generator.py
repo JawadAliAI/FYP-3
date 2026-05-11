@@ -5,24 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-<<<<<<< Updated upstream
-api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
-    raise ValueError("GEMINI_API_KEY is missing")
-
-print("Gemini API Key Loaded Successfully")
-
-genai.configure(api_key=api_key)
-
-model = genai.GenerativeModel(
-    "gemini-1.5-flash",
-    generation_config={
-        "response_mime_type": "application/json"
-    }
-)
-# You can use "gemini-1.5-pro" for higher reasoning
-=======
 # Prefer newest; fall back if the account/API version does not expose a model.
 _MODEL_CANDIDATES = [
     "gemini-2.5-flash",
@@ -62,7 +44,6 @@ def _strip_code_fences(raw: str) -> str:
     if raw.endswith("```"):
         raw = raw[:-3]
     return raw.strip()
->>>>>>> Stashed changes
 
 
 def generate_workout_plan(profile, parameters):
@@ -141,29 +122,7 @@ JSON Format:
             last_err = e
             continue
 
-<<<<<<< Updated upstream
-    # Clean up the response text to remove markdown blocks if present
-    raw_text = response.text.strip()
-    if raw_text.startswith("```json"):
-        raw_text = raw_text[7:]
-    elif raw_text.startswith("```"):
-        raw_text = raw_text[3:]
-    if raw_text.endswith("```"):
-        raw_text = raw_text[:-3]
-    
-    raw_text = raw_text.strip()
-    
-    try:
-        workout_json = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        print(f"JSON Parsing Error: {e}")
-        print(f"Raw Text: {raw_text}")
-        raise ValueError("Failed to parse workout plan from AI")
-        
-    return workout_json
-=======
     raise ValueError(
         f"All Gemini models failed. Last error: {last_err!s}. "
         "Verify GEMINI_API_KEY, billing, and that generative language API is enabled for the project."
     ) from last_err
->>>>>>> Stashed changes
