@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from models import UserProfile
 from workout_engine import generate_program_parameters
 from llm_generator import generate_workout_plan
