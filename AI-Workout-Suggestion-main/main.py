@@ -22,6 +22,8 @@ app.add_middleware(
 )
 
 
+
+
 @app.get("/")
 def root():
     return {
@@ -39,12 +41,31 @@ def root():
 def health():
     return {"status": "healthy", "service": "AI Workout Suggestion API"}
 
-
 @app.post("/generate-workout")
 def create_workout(profile: UserProfile):
-    parameters = generate_program_parameters(profile)
-    workout_plan = generate_workout_plan(profile, parameters)
-    return workout_plan
+    try:
+        print("\n===== REQUEST RECEIVED =====")
+        print(profile)
+
+        parameters = generate_program_parameters(profile)
+
+        print("\n===== PARAMETERS =====")
+        print(parameters)
+
+        workout_plan = generate_workout_plan(profile, parameters)
+
+        print("\n===== WORKOUT GENERATED =====")
+
+        return workout_plan
+
+    except Exception as e:
+        print("\n===== FULL ERROR =====")
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 
 if __name__ == "__main__":
