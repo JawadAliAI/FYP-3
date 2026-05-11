@@ -5,10 +5,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    raise ValueError("GEMINI_API_KEY is missing")
+
+print("Gemini API Key Loaded Successfully")
+
+genai.configure(api_key=api_key)
 
 model = genai.GenerativeModel(
-    "gemini-2.5-flash",
+    "gemini-1.5-flash",
     generation_config={
         "response_mime_type": "application/json"
     }
