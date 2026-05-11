@@ -8,7 +8,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel(
-    "gemini-2.0-flash",
+    "gemini-1.5-flash",
     generation_config={
         "response_mime_type": "application/json"
     }
@@ -73,6 +73,22 @@ JSON Format:
         }
     )
 
-    #response = model.generate_content(prompt)
-    workout_json = json.loads(response.text)
+    # Clean up the response text to remove markdown blocks if present
+    raw_text = response.text.strip()
+    if raw_text.startswith("```json"):
+        raw_text = raw_text[7:]
+    elif raw_text.startswith("```"):
+        raw_text = raw_text[3:]
+    if raw_text.endswith("```"):
+        raw_text = raw_text[:-3]
+    
+    raw_text = raw_text.strip()
+    
+    try:
+        workout_json = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        print(f"JSON Parsing Error: {e}")
+        print(f"Raw Text: {raw_text}")
+        raise ValueError("Failed to parse workout plan from AI")
+        
     return workout_json
