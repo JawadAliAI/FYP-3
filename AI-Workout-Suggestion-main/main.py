@@ -4,6 +4,7 @@ from workout_engine import generate_program_parameters
 from llm_generator import generate_workout_plan
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import traceback
 
 app = FastAPI(title="AI Workout Suggestion API")
 
