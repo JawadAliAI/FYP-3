@@ -9,7 +9,7 @@ app = FastAPI(title="AI Workout Suggestion API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://109.123.243.92:11000"],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
