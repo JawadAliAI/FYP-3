@@ -7,10 +7,16 @@ import os
 
 app = FastAPI(title="AI Workout Suggestion API")
 
+origins = [
+    "http://109.123.243.92:11000",
+    "http://localhost:3000",
+    "http://localhost:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
