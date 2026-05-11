@@ -9,15 +9,30 @@ export default defineConfig(({ mode }) => ({
     host: "::", // IPv6 + IPv4
     port: 8080,
     strictPort: true,
+    // Match production nginx paths (see nginx.conf) — same-origin /api/* in dev
+    proxy: {
+      "/api/exercises": {
+        target: "http://127.0.0.1:11003",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/exercises/, ""),
+      },
+      "/api/workout": {
+        target: "http://127.0.0.1:11002",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/workout/, ""),
+      },
+      "/api/assistant": {
+        target: "http://127.0.0.1:11001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/assistant/, ""),
+      },
+    },
   },
   preview: {
     host: "0.0.0.0", // Required for Render
     port: process.env.PORT ? parseInt(process.env.PORT) : 4173,
     strictPort: true,
-    allowedHosts: [
-      "localhost",
-      ".onrender.com", // Allows all Render subdomains
-    ],
+    allowedHosts: "all",
   },
   plugins: [
     react(),
@@ -27,5 +42,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ["@supabase/supabase-js"],
   },
 }));

@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 from fastapi import FastAPI,HTTPException
+=======
+from fastapi import FastAPI, HTTPException
+>>>>>>> Stashed changes
 from models import UserProfile
 from workout_engine import generate_program_parameters
 from llm_generator import generate_workout_plan
@@ -40,11 +44,17 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "AI Workout Suggestion API"}
+    key = os.getenv("GEMINI_API_KEY")
+    return {
+        "status": "healthy",
+        "service": "AI Workout Suggestion API",
+        "gemini_api_key_set": bool(key and key.strip()),
+    }
 
 @app.post("/generate-workout")
 def create_workout(profile: UserProfile):
     try:
+<<<<<<< Updated upstream
         print("\n===== REQUEST RECEIVED =====")
         print(profile)
 
@@ -67,6 +77,19 @@ def create_workout(profile: UserProfile):
             status_code=500,
             detail=str(e)
         )
+=======
+        parameters = generate_program_parameters(profile)
+        workout_plan = generate_workout_plan(profile, parameters)
+        return workout_plan
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Workout generation failed: {e!s}",
+        ) from e
+>>>>>>> Stashed changes
 
 
 if __name__ == "__main__":

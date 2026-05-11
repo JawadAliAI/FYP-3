@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { getWorkoutApiBase } from "@/lib/apiBases";
 import Navbar from "@/components/Navbar";
 import WorkoutModal from "@/components/ui/WorkoutModal";
 import WorkoutCard from "@/components/ui/WorkoutCard";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Exercise {
   name: string;
@@ -24,9 +26,11 @@ interface WorkoutResponse {
 }
 
 export default function SuggestedWorkouts() {
+  const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [workoutData, setWorkoutData] = useState<WorkoutResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const workoutApi = getWorkoutApiBase();
 
   useEffect(() => {
     fetchWorkout();
@@ -64,6 +68,7 @@ export default function SuggestedWorkouts() {
     try {
       setLoading(true);
 
+<<<<<<< Updated upstream
       const res = await fetch(
         `${import.meta.env.VITE_WORKOUT_API_URL || "http://109.123.243.92:11002"}/generate-workout`,
         {
@@ -72,12 +77,37 @@ export default function SuggestedWorkouts() {
           body: JSON.stringify(formData),
         },
       );
+=======
+      const res = await fetch(`${workoutApi}/generate-workout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+>>>>>>> Stashed changes
 
-      const apiData: WorkoutResponse = await res.json();
-      console.log("FULL API RESPONSE:", apiData);
+      const raw = await res.json().catch(() => null);
+      if (!res.ok) {
+        let detail = res.statusText;
+        if (raw && typeof raw === "object" && "detail" in raw) {
+          const d = (raw as { detail: unknown }).detail;
+          detail = typeof d === "string" ? d : JSON.stringify(d);
+        }
+        toast({
+          title: res.status === 422 ? "Invalid form data" : "Workout API error",
+          description: `${res.status}: ${detail}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-      if (!apiData || !apiData.days) {
-        console.error("Invalid workout response");
+      const apiData = raw as WorkoutResponse;
+      if (!apiData?.days) {
+        toast({
+          title: "Invalid response",
+          description: "The workout service returned data without a program. Check API logs.",
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
@@ -87,7 +117,11 @@ export default function SuggestedWorkouts() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        alert("User not logged in");
+        toast({
+          title: "Not signed in",
+          description: "Log in on the Auth page first. Workouts are saved to your account.",
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
@@ -100,6 +134,11 @@ export default function SuggestedWorkouts() {
 
       if (error) {
         console.error("Insert error:", error);
+        toast({
+          title: "Could not save workout",
+          description: error instanceof Error ? error.message : JSON.stringify(error),
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
@@ -109,6 +148,11 @@ export default function SuggestedWorkouts() {
       setLoading(false);
     } catch (error) {
       console.error("Error generating workout:", error);
+      toast({
+        title: "Network error",
+        description: error instanceof Error ? error.message : "Could not reach the workout API.",
+        variant: "destructive",
+      });
       setLoading(false);
     }
   };

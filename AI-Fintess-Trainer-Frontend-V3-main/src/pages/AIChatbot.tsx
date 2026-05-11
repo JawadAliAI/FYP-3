@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { getAssistantApiBase } from "@/lib/apiBases";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,8 +45,7 @@ const AIChatbot = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Backend API URL - Update this to your FastAPI server URL
-  const API_BASE_URL = import.meta.env.VITE_ASSISTANT_API_URL || "https://fitbot-api-cbnd.onrender.com"; // Deployed backend on Render
+  const API_BASE_URL = getAssistantApiBase();
 
   useEffect(() => {
     checkAuth();
