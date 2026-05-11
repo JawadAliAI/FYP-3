@@ -8,7 +8,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel(
-    "models/gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
     generation_config={
         "response_mime_type": "application/json"
     }
