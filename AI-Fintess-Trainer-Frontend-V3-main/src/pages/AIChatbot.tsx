@@ -45,7 +45,7 @@ const AIChatbot = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Backend API URL - Update this to your FastAPI server URL
-  const API_BASE_URL = import.meta.env.VITE_ASSISTANT_API_URL || "https://fitbot-api-cbnd.onrender.com"; // Deployed backend on Render
+  const API_BASE_URL = import.meta.env.VITE_ASSISTANT_API_URL || "http://109.123.243.92:11001"; // Deployed backend on Render
 
   useEffect(() => {
     checkAuth();
