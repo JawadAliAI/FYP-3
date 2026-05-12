@@ -578,15 +578,24 @@ recognizer = sr.Recognizer()
 async def speech_to_text(file: UploadFile = File(...)):
     """Convert speech to text"""
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
             tmp.write(await file.read())
             tmp_path = tmp.name
         
-        with sr.AudioFile(tmp_path) as source:
+        # Browsers record in WebM/OGG. Convert to true WAV using ffmpeg.
+        wav_path = tmp_path + "_converted.wav"
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", tmp_path, "-ar", "16000", "-ac", "1", wav_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        
+        with sr.AudioFile(wav_path) as source:
             audio_data = recognizer.record(source)
             transcript = recognizer.recognize_google(audio_data)
         
         os.remove(tmp_path)
+        if os.path.exists(wav_path):
+            os.remove(wav_path)
         return JSONResponse({"transcript": transcript})
     except sr.UnknownValueError:
         raise HTTPException(status_code=400, detail="Could not understand audio")
