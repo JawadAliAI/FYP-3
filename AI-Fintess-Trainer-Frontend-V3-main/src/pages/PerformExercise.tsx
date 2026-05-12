@@ -76,7 +76,7 @@ const PerformExercise = () => {
       const currentDuration = durationRef.current;
       const { error } = await supabase.from("exercise_history").insert({
         user_id: user.id,
-        exercise_name: exercise.name,
+        exercise_type: exercise.name,
         reps: finalReps,
         duration: currentDuration,
         calories_burned: Math.round((currentDuration / 60) * (exercise.calories_burned || 5)),

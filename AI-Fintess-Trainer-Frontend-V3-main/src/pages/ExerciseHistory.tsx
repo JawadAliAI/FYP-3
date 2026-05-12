@@ -59,7 +59,7 @@ const ExerciseHistory = () => {
               <Card key={item.id} className="hover:border-primary/50 transition-colors">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">{item.exercise_name}</CardTitle>
+                    <CardTitle className="text-xl">{item.exercise_type}</CardTitle>
                     <span className="text-sm text-muted-foreground">
                       {format(new Date(item.completed_at), "MMM dd, yyyy 'at' HH:mm")}
                     </span>
