@@ -26,10 +26,16 @@ const PerformExercise = () => {
 
   const exercise = location.state?.exercise;
   const [isExercising, setIsExercising] = useState(false);
+  const isExercisingRef = useRef(false);
+  useEffect(() => { isExercisingRef.current = isExercising; }, [isExercising]);
+
   const [reps, setReps] = useState(0);
   const [assignedReps] = useState(10);
   const [duration, setDuration] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const isCompleteRef = useRef(false);
+  useEffect(() => { isCompleteRef.current = isComplete; }, [isComplete]);
+
   const [feedback, setFeedback] = useState("Press Start Workout to begin");
   const [cameraError, setCameraError] = useState(false);
   const [loadingModel, setLoadingModel] = useState(false);
@@ -131,9 +137,9 @@ const PerformExercise = () => {
       window.drawLandmarks(canvasCtx, results.poseLandmarks,
         { color: '#FF0000', lineWidth: 2 });
 
-      // Throttle API calls to 2 times a second (500ms) to avoid overloading the backend
+      // Throttle API calls to avoid overloading the backend, but fast enough to not miss reps (150ms ~ 7fps)
       const now = Date.now();
-      if (isExercising && !isComplete && (now - lastCallTime.current > 500)) {
+      if (isExercisingRef.current && !isCompleteRef.current && (now - lastCallTime.current > 150)) {
         lastCallTime.current = now;
         sendRepPhase(results.poseLandmarks);
       }
