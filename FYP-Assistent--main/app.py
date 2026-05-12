@@ -563,7 +563,11 @@ async def text_to_speech(req: TTSRequest):
         tts = gTTS(text=clean_text, lang=req.language_code)
         tts.save(tmp_mp3.name)
 
-        return FileResponse(tmp_mp3.name, media_type="audio/mpeg", filename="speech.mp3")
+        return FileResponse(
+            tmp_mp3.name, 
+            media_type="audio/mpeg",
+            headers={"Content-Disposition": "inline"}
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS Error: {str(e)}")
 
