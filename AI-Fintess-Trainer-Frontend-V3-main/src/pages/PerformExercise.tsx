@@ -81,8 +81,13 @@ const PerformExercise = () => {
       
       toast({ title: "Workout Saved! 🎉", description: "Your progress is in your history." });
       setTimeout(() => navigate("/exercise-history"), 2000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Save error:", err);
+      toast({ 
+        title: "Database Error", 
+        description: err.message || JSON.stringify(err), 
+        variant: "destructive" 
+      });
     }
   }, [duration, exercise, toast]);
 
