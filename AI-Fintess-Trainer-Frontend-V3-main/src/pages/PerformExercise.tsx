@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,68 +9,16 @@ import { Play, Square, Camera, CheckCircle2, ChevronLeft } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_EXERCISE_API_URL || "http://109.123.243.92:11003";
 
-// ─── Simple angle calculator (no MediaPipe needed) ───────────────────────────
-// Generates mock landmarks sufficient for backend rep counting
-function mockLandmarksForExercise(exercise: string, phase: "UP" | "DOWN") {
-  // 33 landmarks, all zero except the joints the backend cares about
-  const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0, visibility: 0.9 }));
-
-  const name = exercise.toLowerCase();
-
-  if (name.includes("squat")) {
-    // Hip=23, Knee=25, Ankle=27  angle <90 → DOWN, >160 → UP
-    if (phase === "DOWN") {
-      lm[23] = { x: 0.5, y: 0.3, z: 0, visibility: 0.9 };
-      lm[25] = { x: 0.5, y: 0.55, z: 0, visibility: 0.9 };
-      lm[27] = { x: 0.5, y: 0.7, z: 0, visibility: 0.9 };
-    } else {
-      lm[23] = { x: 0.5, y: 0.3, z: 0, visibility: 0.9 };
-      lm[25] = { x: 0.5, y: 0.5, z: 0, visibility: 0.9 };
-      lm[27] = { x: 0.5, y: 0.9, z: 0, visibility: 0.9 };
-    }
-  } else if (name.includes("pushup") || name.includes("push-up") || name.includes("push up")) {
-    // Shoulder=11, Elbow=13, Wrist=15  >160 → UP, <90 → DOWN
-    if (phase === "DOWN") {
-      lm[11] = { x: 0.3, y: 0.4, z: 0, visibility: 0.9 };
-      lm[13] = { x: 0.45, y: 0.5, z: 0, visibility: 0.9 };
-      lm[15] = { x: 0.6, y: 0.45, z: 0, visibility: 0.9 };
-    } else {
-      lm[11] = { x: 0.3, y: 0.4, z: 0, visibility: 0.9 };
-      lm[13] = { x: 0.5, y: 0.4, z: 0, visibility: 0.9 };
-      lm[15] = { x: 0.65, y: 0.4, z: 0, visibility: 0.9 };
-    }
-  } else if (name.includes("pullup") || name.includes("pull-up") || name.includes("pull up")) {
-    // Shoulder=12, Elbow=14, Wrist=16
-    if (phase === "DOWN") {
-      lm[12] = { x: 0.3, y: 0.5, z: 0, visibility: 0.9 };
-      lm[14] = { x: 0.35, y: 0.35, z: 0, visibility: 0.9 };
-      lm[16] = { x: 0.4, y: 0.2, z: 0, visibility: 0.9 };
-    } else {
-      lm[12] = { x: 0.3, y: 0.5, z: 0, visibility: 0.9 };
-      lm[14] = { x: 0.4, y: 0.6, z: 0, visibility: 0.9 };
-      lm[16] = { x: 0.5, y: 0.7, z: 0, visibility: 0.9 };
-    }
-  } else if (name.includes("plank")) {
-    // Shoulder=12, Hip=24, Ankle=28 — perfect angle 160-175
-    lm[12] = { x: 0.3, y: 0.4, z: 0, visibility: 0.9 };
-    lm[24] = { x: 0.5, y: 0.42, z: 0, visibility: 0.9 };
-    lm[28] = { x: 0.8, y: 0.44, z: 0, visibility: 0.9 };
-  } else {
-    // Default: pushup pattern
-    if (phase === "DOWN") {
-      lm[11] = { x: 0.3, y: 0.4, z: 0, visibility: 0.9 };
-      lm[13] = { x: 0.45, y: 0.5, z: 0, visibility: 0.9 };
-      lm[15] = { x: 0.6, y: 0.45, z: 0, visibility: 0.9 };
-    } else {
-      lm[11] = { x: 0.3, y: 0.4, z: 0, visibility: 0.9 };
-      lm[13] = { x: 0.5, y: 0.4, z: 0, visibility: 0.9 };
-      lm[15] = { x: 0.65, y: 0.4, z: 0, visibility: 0.9 };
-    }
+declare global {
+  interface Window {
+    Pose: any;
+    Camera: any;
+    drawConnectors: any;
+    drawLandmarks: any;
+    POSE_CONNECTIONS: any;
   }
-  return lm;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 const PerformExercise = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -84,13 +32,14 @@ const PerformExercise = () => {
   const [isComplete, setIsComplete] = useState(false);
   const [feedback, setFeedback] = useState("Press Start Workout to begin");
   const [cameraError, setCameraError] = useState(false);
+  const [loadingModel, setLoadingModel] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const sessionIdRef = useRef<string>(Math.random().toString(36).substring(7));
-  const phaseRef = useRef<"UP" | "DOWN">("UP");
-  const intervalRef = useRef<any>(null);
+  const poseRef = useRef<any>(null);
+  const cameraRef = useRef<any>(null);
+  const lastCallTime = useRef<number>(0);
 
   // Auth check
   useEffect(() => {
@@ -125,11 +74,74 @@ const PerformExercise = () => {
     } catch (err) {
       console.error("Save error:", err);
     }
-  }, [duration, exercise]);
+  }, [duration, exercise, toast]);
 
-  // ── Rep ticker: alternates UP/DOWN phases, calls backend ──────────────────
-  const sendRepPhase = useCallback(async (phase: "UP" | "DOWN") => {
-    const landmarks = mockLandmarksForExercise(exercise?.name || "", phase);
+  // MediaPipe Setup
+  useEffect(() => {
+    if (!window.Pose) {
+      console.error("MediaPipe not loaded from CDN.");
+      return;
+    }
+
+    const pose = new window.Pose({
+      locateFile: (file: string) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+      }
+    });
+
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      smoothSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    pose.onResults(onResults);
+    poseRef.current = pose;
+
+    return () => {
+      if (cameraRef.current) {
+        cameraRef.current.stop();
+      }
+      if (poseRef.current) {
+        poseRef.current.close();
+      }
+    };
+  }, []);
+
+  const onResults = async (results: any) => {
+    if (!canvasRef.current || !videoRef.current) return;
+    const canvasCtx = canvasRef.current.getContext("2d");
+    if (!canvasCtx) return;
+
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Draw video frame on canvas
+    canvasCtx.drawImage(
+      results.image, 0, 0, canvasRef.current.width, canvasRef.current.height
+    );
+
+    // Draw landmarks
+    if (results.poseLandmarks) {
+      window.drawConnectors(canvasCtx, results.poseLandmarks, window.POSE_CONNECTIONS,
+        { color: '#00FF00', lineWidth: 4 });
+      window.drawLandmarks(canvasCtx, results.poseLandmarks,
+        { color: '#FF0000', lineWidth: 2 });
+
+      // Throttle API calls to 2 times a second (500ms) to avoid overloading the backend
+      const now = Date.now();
+      if (isExercising && !isComplete && (now - lastCallTime.current > 500)) {
+        lastCallTime.current = now;
+        sendRepPhase(results.poseLandmarks);
+      }
+    }
+    canvasCtx.restore();
+  };
+
+  const sendRepPhase = async (landmarks: any) => {
     try {
       const res = await fetch(`${API_BASE}/process_pose`, {
         method: "POST",
@@ -147,41 +159,13 @@ const PerformExercise = () => {
       if (data.reps >= assignedReps && !isComplete) {
         setIsComplete(true);
         setIsExercising(false);
-        clearInterval(intervalRef.current);
         handleExerciseComplete(data.reps);
-        toast({ title: "Goal Reached! 🏆", description: "Exercise completed successfully." });
       }
-    } catch {
-      // backend unreachable — count locally
-      setFeedback(phase === "DOWN" ? "Good! Go back up!" : "Lower yourself down...");
-    }
-  }, [exercise, assignedReps, isComplete, handleExerciseComplete]);
-
-  // Start camera (no MediaPipe — just live camera preview)
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setCameraError(false);
-    } catch {
-      setCameraError(true);
+    } catch (e) {
+      console.error("Backend error:", e);
     }
   };
 
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-  };
-
-  // Start workout
   const startExercise = async () => {
     try {
       await fetch(`${API_BASE}/reset`, {
@@ -194,36 +178,41 @@ const PerformExercise = () => {
     setReps(0);
     setDuration(0);
     setIsComplete(false);
-    setFeedback("Ready! Start moving...");
-    phaseRef.current = "UP";
+    setFeedback("Initializing AI tracking...");
     setIsExercising(true);
+    setLoadingModel(true);
 
-    await startCamera();
-
-    // Alternate UP/DOWN every 1.5 seconds to simulate rep phases
-    intervalRef.current = setInterval(() => {
-      const next: "UP" | "DOWN" = phaseRef.current === "UP" ? "DOWN" : "UP";
-      phaseRef.current = next;
-      sendRepPhase(next);
-    }, 1500);
-
-    toast({ title: "Started 💪", description: "Perform your reps — tracking is active." });
+    if (videoRef.current && poseRef.current) {
+      const camera = new window.Camera(videoRef.current, {
+        onFrame: async () => {
+          if (videoRef.current) {
+            await poseRef.current.send({ image: videoRef.current });
+            if (loadingModel) setLoadingModel(false);
+          }
+        },
+        width: 640,
+        height: 480
+      });
+      cameraRef.current = camera;
+      try {
+        await camera.start();
+        setFeedback("Ready! Start moving...");
+        setCameraError(false);
+      } catch {
+        setCameraError(true);
+        setIsExercising(false);
+        setLoadingModel(false);
+      }
+    }
   };
 
   const stopExercise = () => {
     setIsExercising(false);
-    clearInterval(intervalRef.current);
-    stopCamera();
+    if (cameraRef.current) {
+      cameraRef.current.stop();
+    }
     setFeedback("Exercise stopped. Great effort!");
   };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      clearInterval(intervalRef.current);
-      stopCamera();
-    };
-  }, []);
 
   if (!exercise) return null;
 
@@ -234,7 +223,6 @@ const PerformExercise = () => {
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-5xl">
 
-        {/* Back button */}
         <button
           onClick={() => { stopExercise(); navigate("/suggested-workouts"); }}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6 transition-colors"
@@ -246,7 +234,6 @@ const PerformExercise = () => {
 
         <div className="grid md:grid-cols-2 gap-6">
 
-          {/* ── Left: Stats + Controls ────────────────────────────────── */}
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">{exercise.name}</CardTitle>
@@ -256,7 +243,6 @@ const PerformExercise = () => {
             </CardHeader>
             <CardContent className="space-y-6">
 
-              {/* Stats */}
               <div className="grid grid-cols-3 gap-4 text-center">
                 {[
                   { label: "Performed", value: reps },
@@ -270,7 +256,6 @@ const PerformExercise = () => {
                 ))}
               </div>
 
-              {/* Progress bar */}
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Progress</span>
@@ -284,14 +269,12 @@ const PerformExercise = () => {
                 </div>
               </div>
 
-              {/* Feedback */}
               <div className="bg-secondary/30 p-4 rounded-lg border border-secondary">
                 <p className="text-center font-medium italic text-secondary-foreground">
                   "{feedback}"
                 </p>
               </div>
 
-              {/* Buttons */}
               {!isExercising ? (
                 <Button onClick={startExercise} className="w-full h-12 text-lg">
                   <Play className="mr-2 h-5 w-5" /> Start Workout
@@ -302,7 +285,6 @@ const PerformExercise = () => {
                 </Button>
               )}
 
-              {/* Complete banner */}
               {isComplete && (
                 <div className="p-4 bg-green-500/10 border border-green-500/30 text-green-500 rounded-lg text-center font-semibold animate-in fade-in zoom-in duration-300 flex items-center justify-center gap-2">
                   <CheckCircle2 className="h-5 w-5" />
@@ -310,22 +292,19 @@ const PerformExercise = () => {
                 </div>
               )}
 
-              {/* Instructions */}
               {!isComplete && (
                 <div>
                   <h4 className="text-sm font-semibold mb-2">Instructions:</h4>
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
-                    <li>Press Start Workout and begin your reps.</li>
-                    <li>The tracker counts each rep automatically.</li>
-                    <li>Keep your camera on so the AI can see you clearly.</li>
-                    <li>Stay well-lit and 6–10 ft from the camera.</li>
+                    <li>Press Start Workout and step back.</li>
+                    <li>Ensure your full body is visible in the camera.</li>
+                    <li>Perform the exercise and the AI will count reps!</li>
                   </ul>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* ── Right: Camera Preview ─────────────────────────────────── */}
           <Card className="overflow-hidden border-2 border-primary/10">
             <CardHeader className="bg-muted/50 pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -334,17 +313,20 @@ const PerformExercise = () => {
             </CardHeader>
             <CardContent className="p-0 bg-black relative aspect-[4/3] flex items-center justify-center">
 
-              {/* Live video — lightweight, no WASM */}
               <video
                 ref={videoRef}
-                className="w-full h-full object-cover"
+                className="hidden"
                 playsInline
                 muted
                 autoPlay
               />
-              <canvas ref={canvasRef} className="hidden" />
+              <canvas 
+                ref={canvasRef} 
+                className={`w-full h-full object-cover ${!isExercising && 'hidden'}`}
+                width={640} 
+                height={480}
+              />
 
-              {/* Overlay when not started */}
               {!isExercising && (
                 <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white p-6 text-center">
                   <div className="bg-primary/20 p-4 rounded-full mb-4">
@@ -356,13 +338,18 @@ const PerformExercise = () => {
                   </p>
                   {cameraError && (
                     <p className="text-red-400 text-xs mt-3">
-                      ⚠️ Camera not available — rep counting still works.
+                      ⚠️ Camera not available. Please check browser permissions.
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Rep counter overlay while exercising */}
+              {loadingModel && (
+                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
+                  <p className="animate-pulse font-semibold">Loading AI Vision Model...</p>
+                </div>
+              )}
+
               {isExercising && (
                 <div className="absolute top-3 right-3 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-bold">
                   {reps} / {assignedReps} reps
