@@ -31,10 +31,13 @@ const PerformExercise = () => {
 
   const [reps, setReps] = useState(0);
   const [assignedReps] = useState(10);
-  const [duration, setDuration] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const isCompleteRef = useRef(false);
   useEffect(() => { isCompleteRef.current = isComplete; }, [isComplete]);
+
+  const [duration, setDuration] = useState(0);
+  const durationRef = useRef(0);
+  useEffect(() => { durationRef.current = duration; }, [duration]);
 
   const [feedback, setFeedback] = useState("Press Start Workout to begin");
   const [cameraError, setCameraError] = useState(false);
@@ -65,16 +68,18 @@ const PerformExercise = () => {
   }, [isExercising, isComplete]);
 
   // Save to DB on complete
-  const handleExerciseComplete = useCallback(async (finalReps: number) => {
+  const handleExerciseCompleteRef = useRef<any>(null);
+  handleExerciseCompleteRef.current = async (finalReps: number) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      const currentDuration = durationRef.current;
       const { error } = await supabase.from("exercise_history").insert({
         user_id: user.id,
         exercise_name: exercise.name,
         reps: finalReps,
-        duration,
-        calories_burned: Math.round((duration / 60) * (exercise.calories_burned || 5)),
+        duration: currentDuration,
+        calories_burned: Math.round((currentDuration / 60) * (exercise.calories_burned || 5)),
       });
       
       if (error) throw error;
@@ -89,7 +94,7 @@ const PerformExercise = () => {
         variant: "destructive" 
       });
     }
-  }, [duration, exercise, toast]);
+  };
 
   // MediaPipe Setup
   useEffect(() => {
@@ -126,6 +131,35 @@ const PerformExercise = () => {
     };
   }, []);
 
+  const sendRepPhaseRef = useRef<any>(null);
+  sendRepPhaseRef.current = async (landmarks: any) => {
+    try {
+      const res = await fetch(`${API_BASE}/process_pose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          landmarks,
+          exercise: exercise?.name?.toLowerCase() || "squat",
+          session_id: sessionIdRef.current,
+          assigned_reps: assignedReps,
+        }),
+      });
+      const data = await res.json();
+      if (data.reps !== undefined) setReps(data.reps);
+      if (data.feedback) setFeedback(data.feedback);
+      if (data.reps >= assignedReps && !isCompleteRef.current) {
+        isCompleteRef.current = true; // Mutate immediately to prevent duplicate requests
+        setIsComplete(true);
+        setIsExercising(false);
+        if (handleExerciseCompleteRef.current) {
+          handleExerciseCompleteRef.current(data.reps);
+        }
+      }
+    } catch (e) {
+      console.error("Backend error:", e);
+    }
+  };
+
   const onResults = async (results: any) => {
     if (!canvasRef.current || !videoRef.current) return;
     const canvasCtx = canvasRef.current.getContext("2d");
@@ -150,35 +184,12 @@ const PerformExercise = () => {
       const now = Date.now();
       if (isExercisingRef.current && !isCompleteRef.current && (now - lastCallTime.current > 150)) {
         lastCallTime.current = now;
-        sendRepPhase(results.poseLandmarks);
+        if (sendRepPhaseRef.current) {
+           sendRepPhaseRef.current(results.poseLandmarks);
+        }
       }
     }
     canvasCtx.restore();
-  };
-
-  const sendRepPhase = async (landmarks: any) => {
-    try {
-      const res = await fetch(`${API_BASE}/process_pose`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          landmarks,
-          exercise: exercise?.name?.toLowerCase() || "squat",
-          session_id: sessionIdRef.current,
-          assigned_reps: assignedReps,
-        }),
-      });
-      const data = await res.json();
-      if (data.reps !== undefined) setReps(data.reps);
-      if (data.feedback) setFeedback(data.feedback);
-      if (data.reps >= assignedReps && !isComplete) {
-        setIsComplete(true);
-        setIsExercising(false);
-        handleExerciseComplete(data.reps);
-      }
-    } catch (e) {
-      console.error("Backend error:", e);
-    }
   };
 
   const startExercise = async () => {
