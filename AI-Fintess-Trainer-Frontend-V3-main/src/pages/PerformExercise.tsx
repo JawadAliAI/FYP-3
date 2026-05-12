@@ -69,14 +69,18 @@ const PerformExercise = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase.from("exercise_history").insert({
+      const { error } = await supabase.from("exercise_history").insert({
         user_id: user.id,
-        exercise_name: exercise.name,
+        exercise_type: exercise.name,
         reps: finalReps,
         duration,
         calories_burned: Math.round((duration / 60) * (exercise.calories_burned || 5)),
       });
+      
+      if (error) throw error;
+      
       toast({ title: "Workout Saved! 🎉", description: "Your progress is in your history." });
+      setTimeout(() => navigate("/exercise-history"), 2000);
     } catch (err) {
       console.error("Save error:", err);
     }
