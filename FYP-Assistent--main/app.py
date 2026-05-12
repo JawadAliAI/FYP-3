@@ -563,13 +563,7 @@ async def text_to_speech(req: TTSRequest):
         tts = gTTS(text=clean_text, lang=req.language_code)
         tts.save(tmp_mp3.name)
 
-        tmp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-        subprocess.run(
-            ["ffmpeg", "-y", "-i", tmp_mp3.name, "-ar", "44100", "-ac", "2", tmp_wav.name],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        os.remove(tmp_mp3.name)
-        return FileResponse(tmp_wav.name, media_type="audio/wav", filename="speech.wav")
+        return FileResponse(tmp_mp3.name, media_type="audio/mpeg", filename="speech.mp3")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS Error: {str(e)}")
 
